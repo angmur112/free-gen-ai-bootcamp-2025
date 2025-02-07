@@ -2,7 +2,7 @@
 
 ### Model
 
-GPT 4o
+GPT 3.5
 
 > I have the free version of ChatGPT
 
