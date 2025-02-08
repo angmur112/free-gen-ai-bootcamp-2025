@@ -1,0 +1,49 @@
+---
+description: Rules for  flask code
+globs: /backend
+---
+
+# Your rule content
+
+
+from flask import jsonify
+
+def create_app():
+    app = Flask(__name__)
+    
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return jsonify({'error': 'Resource not found'}), 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        return jsonify({'error': 'Internal server error'}), 500
+        
+    return app
+
+
+# users/routes.py
+from flask import Blueprint
+
+users_bp = Blueprint('users', __name__)
+
+@users_bp.route('/users')
+def get_users():
+    return 'Users list'
+
+# In your app factory
+def create_app():
+    app = Flask(__name__)
+    app.register_blueprint(users_bp)
+    return app
+
+
+
+# Bad approach
+app = Flask(__name__)
+
+# Good approach
+def create_app():
+    app = Flask(__name__)
+    # Configure your app
+    return app
