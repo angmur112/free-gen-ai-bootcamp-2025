@@ -151,7 +151,26 @@ def load(app):
     except Exception as e:
       return jsonify({"error": str(e)}), 500
 
-  # todo POST /study_sessions/:id/review
+  @app.route('/api/study-sessions/<int:id>/review', methods=['POST'])
+  @cross_origin()
+  def submit_review():
+    try:
+      data = request.get_json()
+      cursor = app.db.cursor()
+      
+      # Insert word review
+      cursor.execute('''
+        INSERT INTO word_review_items (word_id, study_session_id, correct)
+        VALUES (?, ?, ?)
+      ''', (data['word_id'], id, data['correct']))
+      
+      app.db.commit()
+      
+      return jsonify({
+        'message': 'Review submitted successfully'
+      }), 201
+    except Exception as e:
+      return jsonify({"error": str(e)}), 500
 
   @app.route('/api/study-sessions/reset', methods=['POST'])
   @cross_origin()
@@ -168,5 +187,28 @@ def load(app):
       app.db.commit()
       
       return jsonify({"message": "Study history cleared successfully"}), 200
+    except Exception as e:
+      return jsonify({"error": str(e)}), 500
+
+  @app.route('/api/study-sessions', methods=['POST'])
+  @cross_origin()
+  def create_study_session():
+    try:
+      data = request.get_json()
+      cursor = app.db.cursor()
+      
+      # Insert new study session
+      cursor.execute('''
+        INSERT INTO study_sessions (group_id, study_activity_id)
+        VALUES (?, ?)
+      ''', (data['group_id'], data['activity_id']))
+      
+      session_id = cursor.lastrowid
+      app.db.commit()
+      
+      return jsonify({
+        'id': session_id,
+        'message': 'Study session created successfully'
+      }), 201
     except Exception as e:
       return jsonify({"error": str(e)}), 500
