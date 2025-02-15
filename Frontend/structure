@@ -1,0 +1,14 @@
+Frontend/
+├── src/
+│   ├── components/
+│   │   ├── common/
+│   │   ├── dashboard/
+│   │   ├── studyActivities/
+│   │   ├── words/
+│   │   ├── groups/
+│   │   ├── studySessions/
+│   │   └── settings/
+│   ├── pages/
+│   ├── services/
+│   ├── utils/
+│   └── styles/ 
