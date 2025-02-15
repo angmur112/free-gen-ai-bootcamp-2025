@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the technical specifications for the Japanese Learning Portal frontend application built with React.
+This document outlines the technical specifications for the Learning Portal frontend application built with React.
 
 ## Technology Stack
 
