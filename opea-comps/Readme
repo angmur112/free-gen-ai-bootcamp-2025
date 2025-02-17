@@ -1,0 +1,9 @@
+## Running Ollama Third-Party Service
+
+### Choosing a Model
+
+You can get the model_id that ollama will launch from the [Ollama Library](https://ollama.com/library).
+
+https://ollama.com/library/llama3.2
+
+eg. LLM_MODEL_ID="llama3.2:1b"
