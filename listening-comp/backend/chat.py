@@ -1,3 +1,8 @@
+"""
+This module implements a chatbot interface using Amazon Bedrock and Streamlit.
+It provides real-time chat functionality with AI language models.
+"""
+
 import boto3
 import json
 import streamlit as st
@@ -7,13 +12,31 @@ MODEL_ID = "amazon.nova-lite-v1:0"  # Replace with your desired Bedrock model ID
 BEDROCK_REGION = "us-east-1"  # Replace with your Bedrock region
 
 class BedrockChat:
+    """
+    Handles communication with Amazon Bedrock's language models.
+    Provides methods for generating responses to user messages.
+    """
+    
     def __init__(self, model_id: str = MODEL_ID):
-        """Initialize Bedrock chat client"""
+        """
+        Initialize the chat client with Bedrock configuration.
+        Args:
+            model_id: The specific Bedrock model to use for generating responses
+        """
         self.bedrock_client = boto3.client('bedrock-runtime', region_name=BEDROCK_REGION)
         self.model_id = model_id
 
     def generate_response(self, message: str, inference_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
-        """Generate a response using Amazon Bedrock"""
+        """
+        Generate an AI response using Amazon Bedrock.
+        
+        Args:
+            message: The user's input message
+            inference_config: Optional configuration for the model (temperature, etc.)
+            
+        Returns:
+            The generated response text, or None if generation fails
+        """
         if not message:
             st.error("Error: Message cannot be empty.")
             return None
@@ -42,7 +65,11 @@ class BedrockChat:
 
 def main():
     """
-    Main function to run the chatbot using Streamlit.
+    Main application function that:
+    1. Sets up the Streamlit chat interface
+    2. Manages chat history in session state
+    3. Handles user input and displays responses
+    4. Maintains conversation context
     """
     st.title("Bedrock Chatbot")
 
