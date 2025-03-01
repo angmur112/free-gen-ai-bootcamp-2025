@@ -11,20 +11,13 @@ import base64
 st.set_page_config(page_title="Japanese Writing Practice", layout="wide")
 st.title("Japanese Writing Practice")
 
-# Add debug logging
-st.write("Debug: App is starting...")
-
-# Simplify session state initialization
+# Simplify session state initialization without debug logs
 if 'page_state' not in st.session_state:
-    st.write("Debug: Initializing session state...")
     st.session_state.page_state = "setup"
     st.session_state.words = []
     st.session_state.current_sentence = ""
     st.session_state.current_word = None
     st.session_state.review_data = {}
-
-# Test if session state is working
-st.write(f"Debug: Current page state is {st.session_state.page_state}")
 
 # Fetch words from API on initialization
 @st.cache_data
