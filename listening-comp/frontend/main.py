@@ -46,6 +46,7 @@ from backend.get_transcript import YouTubeTranscriptDownloader
 from backend.structured_data import TranscriptParser
 from backend.vector_store import QuestionStore
 from backend.chat import BedrockChat
+from backend.audio_generator import AudioGenerator
 
 # Initialize session state variables for maintaining state between reruns
 if "questions" not in st.session_state:
@@ -55,40 +56,36 @@ if "current_question" not in st.session_state:
 if "feedback" not in st.session_state:
     st.session_state.feedback = None  # Feedback from AI assistant
 
-def load_questions(filepath: str = "questions.json") -> Dict[str, Any]:
-    """
-    Load previously stored questions from JSON file
-    Returns empty dict if file doesn't exist
-    """
+def load_stored_questions(filepath: str = "stored_questions.json") -> Dict[str, Any]:
+    """Load previously stored questions from JSON file"""
     try:
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
-def save_question(question: Dict[str, Any], filepath: str = "questions.json"):
-    """
-    Save a new question to JSON file
-    Generates unique ID based on timestamp
-    Returns the generated question ID
-    """
-    questions = load_questions(filepath)
+def save_generated_question(question: Dict[str, Any], filepath: str = "stored_questions.json"):
+    """Save a newly generated question to JSON storage"""
+    questions = load_stored_questions(filepath)
     question_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    questions[question_id] = question
-    with open(filepath, 'w') as f:
-        json.dump(questions, f, indent=2)
-    return question_id
+    
+    # Generate audio for the question
+    audio_gen = AudioGenerator()
+    audio_file = audio_gen.generate_audio(question)
+    
+    questions[question_id] = {
+        'timestamp': datetime.now().isoformat(),
+        'content': question,
+        'audio_file': audio_file
+    }
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(questions, f, indent=2, ensure_ascii=False)
 
 def render_sidebar():
-    """
-    Renders the sidebar containing:
-    1. YouTube URL input for generating new questions
-    2. Question search functionality using vector store
-    3. Question selection interface
-    """
+    """Renders the sidebar with question management"""
     st.sidebar.title("Question Management")
     
-    # YouTube URL input
+    # YouTube URL input section
     youtube_url = st.sidebar.text_input("YouTube URL")
     if youtube_url:
         if st.sidebar.button("Generate Questions from Video"):
@@ -99,34 +96,27 @@ def render_sidebar():
                     parser = TranscriptParser()
                     questions = parser.parse_transcript("\n".join([t['text'] for t in transcript]))
                     for q in questions:
-                        save_question(q.to_dict())
+                        save_generated_question(q.to_dict())
                     st.sidebar.success(f"Generated {len(questions)} questions!")
 
-    # Question search
-    st.sidebar.subheader("Search Questions")
-    search_query = st.sidebar.text_input("Search by topic or content")
-    if search_query:
-        store = QuestionStore()
-        similar_questions = store.find_similar_questions(search_query)
-        if similar_questions:
-            selected = st.sidebar.selectbox(
-                "Similar questions found:",
-                [q.question for q in similar_questions]
-            )
-            if selected:
-                question = next(q for q in similar_questions if q.question == selected)
-                st.session_state.current_question = question
+    # Display stored questions
+    st.sidebar.subheader("Previously Generated Questions")
+    stored_questions = load_stored_questions()
+    
+    if stored_questions:
+        for q_id, q_data in stored_questions.items():
+            timestamp = datetime.fromisoformat(q_data['timestamp']).strftime("%Y-%m-%d %H:%M")
+            # Display first 50 characters of the question as preview
+            preview = q_data['content']['question'][:50] + "..."
+            if st.sidebar.button(f"{timestamp}\n{preview}", key=q_id):
+                st.session_state.current_question = q_data['content']
+    else:
+        st.sidebar.info("No stored questions yet. Generate some!")
 
 def render_main_content():
-    """
-    Renders the main content area containing:
-    1. Current question display (if selected)
-    2. Question components (introduction, conversation, question)
-    3. AI assistant interface for help understanding
-    """
+    """Renders the main content area"""
     st.title("JLPT Listening Practice Generator")
     
-    # Display current question if exists
     if st.session_state.current_question:
         question = st.session_state.current_question
         
@@ -134,21 +124,34 @@ def render_main_content():
         
         with col1:
             st.subheader("Question")
+            
+            # Add audio playback
+            if 'audio_file' in question:
+                audio_file = question['audio_file']
+                if os.path.exists(audio_file):
+                    st.audio(audio_file)
+                else:
+                    st.warning("Audio file not found. Regenerating...")
+                    audio_gen = AudioGenerator()
+                    new_audio_file = audio_gen.generate_audio(question)
+                    question['audio_file'] = new_audio_file
+                    st.audio(new_audio_file)
+            
             st.write("Introduction:")
-            st.write(question.introduction)
+            st.write(question['introduction'])
             st.write("Conversation:")
-            st.write(question.conversation)
+            st.write(question['conversation'])
             st.write("Question:")
-            st.write(question.question)
+            st.write(question['question'])
             
         with col2:
             st.subheader("AI Assistant")
             if st.button("Get Help Understanding"):
                 chat = BedrockChat()
                 help_prompt = f"""Help me understand this JLPT listening question:
-                Introduction: {question.introduction}
-                Conversation: {question.conversation}
-                Question: {question.question}
+                Introduction: {question['introduction']}
+                Conversation: {question['conversation']}
+                Question: {question['question']}
                 
                 Please explain:
                 1. Key vocabulary
@@ -158,7 +161,6 @@ def render_main_content():
                 response = chat.generate_response(help_prompt)
                 if response:
                     st.write(response)
-    
     else:
         st.info("Select or generate a question to begin practice!")
 
