@@ -30,4 +30,4 @@ python gradio_app.py
 ## Notes
 - The app will run in demo mode with mock data if the API server is not available
 - You can upload handwritten images for grading
-- Click "Generate New Sentence" to get new practice sentences
+- Click "Generate New Sentence" to get new practice sentence
