@@ -3,12 +3,15 @@ import requests
 import random
 from PIL import Image
 import json
+from manga_ocr import MangaOcr
+import difflib
 
 class JapaneseWritingPractice:
     def __init__(self):
         self.current_word = None
         self.current_sentence = ""
         self.words = self.initialize_words()
+        self.mocr = MangaOcr()
 
     def initialize_words(self):
         try:
@@ -45,40 +48,54 @@ class JapaneseWritingPractice:
             f"Hint: Use the word: {self.current_word['japanese']} ({self.current_word['english']})"
         )
 
+    def calculate_similarity(self, str1, str2):
+        """Calculate string similarity ratio."""
+        return difflib.SequenceMatcher(None, str1, str2).ratio()
+
+    def determine_grade(self, similarity):
+        """Determine grade based on similarity score."""
+        if similarity >= 0.9:
+            return "S", "Excellent! Your handwriting is very clear and accurate."
+        elif similarity >= 0.8:
+            return "A", "Very good! Your writing is clear with minor imperfections."
+        elif similarity >= 0.6:
+            return "B", "Good effort. Keep practicing to improve accuracy."
+        else:
+            return "C", "Keep practicing. Focus on character formation and stroke order."
+
     def grade_submission(self, image):
         if image is None:
             return "Please upload an image first.", "", "", "No Grade", "No feedback available."
 
-        # Mock grading system
-        mock_transcriptions = ["これは本です。", "明日、友達に会います。", "昨日、ラーメンを食べました。"]
-        transcription = random.choice(mock_transcriptions)
-        
-        translations = {
-            "これは本です。": "This is a book.",
-            "明日、友達に会います。": "I will meet my friend tomorrow.",
-            "昨日、ラーメンを食べました。": "Yesterday, I ate ramen."
-        }
-        translation = translations.get(transcription, "I like to study Japanese.")
-        
-        grades = ["S", "A", "B", "C"]
-        grade = random.choice(grades)
-        
-        feedback_templates = {
-            "S": "Excellent! Your handwriting is clear and the sentence is perfectly accurate.",
-            "A": "Very good! Your handwriting is readable and the sentence is mostly accurate.",
-            "B": "Good effort. Your handwriting needs some work and there are a few grammatical errors.",
-            "C": "Keep practicing. Your handwriting is difficult to read and there are several errors."
-        }
-        
-        feedback = feedback_templates[grade]
-        
-        return (
-            self.current_sentence,
-            transcription,
-            translation,
-            f"Grade: {grade}",
-            feedback
-        )
+        try:
+            # Perform OCR on the uploaded image
+            transcription = self.mocr(image)
+            
+            # Calculate similarity with current practice sentence
+            similarity = self.calculate_similarity(transcription, self.current_word['japanese'])
+            
+            # Determine grade and feedback
+            grade, feedback = self.determine_grade(similarity)
+            
+            # Prepare translation (using the current word's English meaning for simplicity)
+            translation = self.current_word['english']
+            
+            return (
+                self.current_sentence,
+                transcription,
+                translation,
+                f"Grade: {grade} (Similarity: {similarity:.2%})",
+                feedback
+            )
+            
+        except Exception as e:
+            return (
+                self.current_sentence,
+                "Error processing image",
+                "",
+                "No Grade",
+                f"Error: {str(e)}"
+            )
 
 def create_app():
     app = JapaneseWritingPractice()
