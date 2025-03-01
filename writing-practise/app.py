@@ -7,8 +7,11 @@ import io
 from PIL import Image
 import base64
 
-# Add debug logging
+# Page title
 st.set_page_config(page_title="Japanese Writing Practice", layout="wide")
+st.title("Japanese Writing Practice")
+
+# Add debug logging
 st.write("Debug: App is starting...")
 
 # Simplify session state initialization

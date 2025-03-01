@@ -3,12 +3,7 @@ import logging
 import sys
 from datetime import datetime
 
-# Set up file logging
-logging.basicConfig(
-    filename='streamlit_debug.log',
-    level=logging.DEBUG,
-    format='%(asctime)s - %(message)s'
-)
+
 
 # Test multiple logging approaches
 print("Test print", flush=True)
