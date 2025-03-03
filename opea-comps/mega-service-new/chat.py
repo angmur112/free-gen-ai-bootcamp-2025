@@ -1,5 +1,23 @@
 import os
 import sys
+import argparse
+import json
+import os
+import re
+
+from comps import MegaServiceEndpoint, MicroService, ServiceOrchestrator, ServiceRoleType, ServiceType
+from comps.cores.mega.utils import handle_message
+from comps.cores.proto.api_protocol import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionResponseChoice,
+    ChatMessage,
+    UsageInfo,
+)
+from comps.cores.proto.docarray import LLMParams, RerankerParms, RetrieverParms
+from fastapi import Request
+from fastapi.responses import StreamingResponse
+from langchain_core.prompts import PromptTemplate
 
 # Debug: Print current directory and Python path
 print(f"Current working directory: {os.getcwd()}")
@@ -29,12 +47,30 @@ class Chat:
         print('init')
         self.megaservice = ServiceOrchestrator()
         self.endpoint = '/angelo chatbot'
+        self.host = '0.0.0.0'
+        self.port = 8888
 
     def add_remote_service(self):
         print('add_remote_service')
 
     def start(self):
         print('start')
+
+        def start(self):
+
+        self.service = MicroService(
+            self.__class__.__name__,
+            service_role=ServiceRoleType.MEGASERVICE,
+            host=self.host,
+            port=self.port,
+            endpoint=self.endpoint,
+            input_datatype=ChatCompletionRequest,
+            output_datatype=ChatCompletionResponse,
+        )
+
+        self.service.add_route(self.endpoint, self.handle_request, methods=["POST"])
+
+        self.service.start()    
 
 if __name__ == '__main__':
     print('main')
