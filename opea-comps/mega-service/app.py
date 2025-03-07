@@ -1,4 +1,13 @@
+# File: app.py
+# Description: Example service implementation using the comps framework
+
+# Standard library imports
+import os
+
+# Third-party imports
 from fastapi import HTTPException
+
+# Local imports
 from comps.cores.proto.api_protocol import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -8,17 +17,19 @@ from comps.cores.proto.api_protocol import (
 )
 from comps.cores.mega.constants import ServiceType, ServiceRoleType
 from comps import MicroService, ServiceOrchestrator
-import os
 
+# Environment variables configuration
 EMBEDDING_SERVICE_HOST_IP = os.getenv("EMBEDDING_SERVICE_HOST_IP", "0.0.0.0")
 EMBEDDING_SERVICE_PORT = os.getenv("EMBEDDING_SERVICE_PORT", 6000)
 LLM_SERVICE_HOST_IP = os.getenv("LLM_SERVICE_HOST_IP", "0.0.0.0")
 LLM_SERVICE_PORT = os.getenv("LLM_SERVICE_PORT", 9000)
 
-
+# Main service class
 class ExampleService:
+    """Example service that handles chat completion requests."""
+    
     def __init__(self, host="0.0.0.0", port=8000):
-        print('hello')
+        """Initialize the service with host and port."""
         os.environ["TELEMETRY_ENDPOINT"] = ""
         self.host = host
         self.port = port
@@ -26,14 +37,7 @@ class ExampleService:
         self.megaservice = ServiceOrchestrator()
 
     def add_remote_service(self):
-        #embedding = MicroService(
-        #    name="embedding",
-        #    host=EMBEDDING_SERVICE_HOST_IP,
-        #    port=EMBEDDING_SERVICE_PORT,
-        #    endpoint="/v1/embeddings",
-        #    use_remote_service=True,
-        #    service_type=ServiceType.EMBEDDING,
-        #)
+        """Configure and add remote LLM service."""
         llm = MicroService(
             name="llm",
             host=LLM_SERVICE_HOST_IP,
@@ -42,12 +46,10 @@ class ExampleService:
             use_remote_service=True,
             service_type=ServiceType.LLM,
         )
-        #self.megaservice.add(embedding).add(llm)
-        #self.megaservice.flow_to(embedding, llm)
         self.megaservice.add(llm)
     
     def start(self):
-
+        """Start the service with configured routes."""
         self.service = MicroService(
             self.__class__.__name__,
             service_role=ServiceRoleType.MEGASERVICE,
@@ -57,43 +59,32 @@ class ExampleService:
             input_datatype=ChatCompletionRequest,
             output_datatype=ChatCompletionResponse,
         )
-
         self.service.add_route(self.endpoint, self.handle_request, methods=["POST"])
-
         self.service.start()
+
     async def handle_request(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
+        """Handle incoming chat completion requests."""
         try:
-            # Format the request for Ollama
+            # Prepare Ollama request format
             ollama_request = {
-                "model": request.model or "llama3.2:1b",  # or whatever default model you're using
+                "model": request.model or "llama3.2:1b",
                 "messages": [
                     {
                         "role": "user",
-                        "content": request.messages  # assuming messages is a string
+                        "content": request.messages
                     }
                 ],
-                "stream": False  # disable streaming for now
+                "stream": False
             }
             
-            # Schedule the request through the orchestrator
+            # Process request through orchestrator
             result = await self.megaservice.schedule(ollama_request)
             
-            # Extract the actual content from the response
-            if isinstance(result, tuple) and len(result) > 0:
-                llm_response = result[0].get('llm/MicroService')
-                if hasattr(llm_response, 'body'):
-                    # Read and process the response
-                    response_body = b""
-                    async for chunk in llm_response.body_iterator:
-                        response_body += chunk
-                    content = response_body.decode('utf-8')
-                else:
-                    content = "No response content available"
-            else:
-                content = "Invalid response format"
-
-            # Create the response
-            response = ChatCompletionResponse(
+            # Process response
+            content = self._process_llm_response(result)
+            
+            # Create and return formatted response
+            return ChatCompletionResponse(
                 model=request.model or "example-model",
                 choices=[
                     ChatCompletionResponseChoice(
@@ -112,12 +103,23 @@ class ExampleService:
                 )
             )
             
-            return response
-            
         except Exception as e:
-            # Handle any errors
             raise HTTPException(status_code=500, detail=str(e))
 
-example = ExampleService()
-example.add_remote_service()
-example.start()
+    def _process_llm_response(self, result):
+        """Helper method to process LLM response."""
+        if isinstance(result, tuple) and len(result) > 0:
+            llm_response = result[0].get('llm/MicroService')
+            if hasattr(llm_response, 'body'):
+                response_body = b""
+                for chunk in llm_response.body_iterator:
+                    response_body += chunk
+                return response_body.decode('utf-8')
+            return "No response content available"
+        return "Invalid response format"
+
+# Service initialization
+if __name__ == "__main__":
+    example = ExampleService()
+    example.add_remote_service()
+    example.start()
