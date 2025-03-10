@@ -2,4 +2,3 @@ fastapi
 uvicorn
 openai
 gradio
-boto3
