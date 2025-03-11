@@ -1,23 +1,58 @@
-import gradio as gr
+import streamlit as st
 import requests
+from requests.exceptions import RequestException
+import logging
 
-def generate_flashcards():
-    response = requests.get("http://localhost:8000/flashcards/")
-    flashcards = response.json()["flashcards"]
-    return flashcards
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-def display_flashcard(flashcard):
-    return gr.Image(flashcard["image_url"], label=flashcard["vocabulary"]["japanese"])
+def check_backend():
+    try:
+        response = requests.get("http://localhost:8001/")
+        return response.status_code == 200
+    except:
+        return False
 
-demo = gr.Interface(
-    fn=display_flashcard,
-    inputs=["text"],
-    outputs=["image"],
-    title="Japanese Flashcards",
-    description="Study Japanese vocabulary with flashcards",
-    article="",
-    examples=generate_flashcards()
-)
+def generate_flashcard():
+    if not check_backend():
+        st.error("Backend is not running. Start it with 'python run.py'")
+        return
 
-if __name__ == "__main__":
-    demo.launch()
+    try:
+        st.info("Requesting flashcard from backend...")
+        response = requests.get("http://localhost:8001/flashcards/")
+        logger.debug(f"Response received: {response.text}")
+        
+        if response.status_code != 200:
+            st.error(f"Backend error: {response.status_code}")
+            st.error(f"Error details: {response.text}")
+            return
+        
+        data = response.json()
+        logger.debug(f"Parsed JSON data: {data}")
+        
+        if "status" not in data or data["status"] != "success":
+            st.error(f"Invalid response from backend: {data}")
+            st.write(f"Raw response content: {response.text}")
+            return
+        
+        flashcard = data["flashcard"]
+        st.success("Flashcard generated successfully!")
+        st.write(f"Japanese: {flashcard['vocabulary']['japanese']}")
+        st.write(f"English: {flashcard['vocabulary']['english']}")
+        st.write("Scene Description:")
+        st.write(flashcard['description'])
+        
+    except requests.ConnectionError as e:
+        logger.error(f"Connection error: {str(e)}")
+        st.error(f"Could not connect to backend: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        st.error(f"Error: {str(e)}")
+        st.error("Check the backend logs for more details")
+
+st.title("Japanese Flashcards")
+st.write("Study Japanese vocabulary with flashcards")
+
+if st.button("Generate Flashcard"):
+    generate_flashcard()

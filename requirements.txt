@@ -1,1 +1,7 @@
 boto3
+fastapi
+uvicorn
+python-dotenv
+openai
+gradio
+requests

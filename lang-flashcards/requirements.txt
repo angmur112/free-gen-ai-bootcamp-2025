@@ -1,4 +1,7 @@
+boto3
 fastapi
 uvicorn
-openai
-gradio
+python-dotenv
+streamlit
+requests
+ollama
