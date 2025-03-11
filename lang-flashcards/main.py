@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import openai
 import os
 from dotenv import load_dotenv
+import random  # added import
 
 load_dotenv()
 
@@ -10,6 +11,11 @@ openai.api_key = os.getenv("OPsk-proj-1QPmizVBCZ3E2GkIhMuKXCrsDc-Uq0cvKBTNlHPZt4
 
 app = FastAPI()
 
+# New health-check route
+@app.get("/")
+async def health_check():
+    return {"status": "success"}
+    
 class Vocabulary(BaseModel):
     japanese: str
     english: str
@@ -17,9 +23,9 @@ class Vocabulary(BaseModel):
 class Flashcard(BaseModel):
     vocabulary: list[Vocabulary]
 
+# Updated /flashcards/ endpoint to return a single flashcard
 @app.get("/flashcards/")
 async def generate_flashcards():
-    # JLPT N5 vocabulary list
     vocabulary_list = [
         {"japanese": "本", "english": "book"},
         {"japanese": "食べる", "english": "eat"},
@@ -27,22 +33,15 @@ async def generate_flashcards():
         {"japanese": "会う", "english": "meet"},
         {"japanese": "車", "english": "car"}
     ]
-
-    # Generate flashcards
-    flashcards = []
-    for vocab in vocabulary_list:
-        # Use OpenAI to find a random picture for the vocabulary
-        response = openai.Image.create(
-            prompt=f"a picture of {vocab['english']}",
-            size="256x256"
-        )
-        image_url = response["data"][0]["url"]
-
-        # Create a flashcard
-        flashcard = {
-            "vocabulary": vocab,
-            "image_url": image_url
-        }
-        flashcards.append(flashcard)
-
-    return {"flashcards": flashcards}
+    # Select a random vocabulary entry
+    vocab = random.choice(vocabulary_list)
+    response = openai.Image.create(
+        prompt=f"a picture of {vocab['english']}",
+        size="256x256"
+    )
+    image_url = response["data"][0]["url"]
+    flashcard = {
+        "vocabulary": vocab,
+        "image_url": image_url
+    }
+    return {"status": "success", "flashcard": flashcard}

@@ -41,12 +41,12 @@ export OPENAI_API_KEY='your_openai_api_key_here'
 ### 5. Running the Application
 Start the FastAPI Backend:
 ```bash
-uvicorn main:app --reload
+python run.py
 ```
 
 Start the Gradio Frontend:
 ```bash
-python ui.py
+python app.py
 ```
 
 ## Usage
