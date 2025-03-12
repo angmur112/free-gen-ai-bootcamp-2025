@@ -2,74 +2,99 @@
 
 ## 📘 Project Overview
 
-A free, open-source Streamlit application designed to help Japanese language learners practice vocabulary through interactive flashcards. The app provides a simple, engaging way to learn JLPT N5 level Japanese words with random image associations.
+An AI-powered Streamlit application designed to help Japanese language learners practice vocabulary through interactive flashcards. The app generates AI-created images for JLPT N5 level Japanese words using multiple image generation services.
 
 ## ✨ Key Features
 
-- 🎴 Random Vocabulary Flashcards
-- 🖼️ Free Image Generation
-- 📊 Basic Spaced Repetition Tracking
-- 🔍 Vocabulary Category Filtering
+- 🎴 Interactive Japanese Vocabulary Flashcards
+- 🖼️ AI Image Generation via Hugging Face Stable Diffusion
+- 🔄 Multiple Image Generation Fallbacks (Unsplash, Local Placeholder)
+- 📊 Basic Spaced Repetition System
+- 🔍 Category-based Vocabulary Filtering
 - 📱 Responsive Streamlit Interface
 
-## 🛠 Technical Specifications
+## 🛠 Technical Architecture
+
+### Core Components
+- **app.py**: Main Streamlit application interface
+- **flashcard_generator.py**: Japanese vocabulary management
+- **image_generator.py**: Multi-source image generation handling
+- **utils.py**: Spaced repetition and utility functions
 
 ### Technology Stack
-- **Frontend**: Streamlit
-- **Language**: Python 3.8+
-- **Image Source**: Pixabay Public API
-- **Deployment**: Local/Streamlit Cloud
+- **Frontend Framework**: Streamlit
+- **Programming Language**: Python 3.8+
+- **Image Generation**: Hugging Face Stable Diffusion API
+- **Fallback Services**: Unsplash API
+- **Environment Management**: python-dotenv
 
-### Core Technologies
-- `streamlit`: Web application framework
-- `requests`: HTTP requests
-- `PIL` (Python Imaging Library): Image processing
-- `random`: Vocabulary and image selection
+### External APIs
+- Hugging Face Stable Diffusion
+- Unsplash Image Service
+- (Optional) Dezgo API Integration
 
-## 📋 System Requirements
+## 📋 Prerequisites
 
-### Minimum Requirements
-- Python 3.8+
-- 2 GB RAM
-- 500 MB Disk Space
+- Python 3.8 or higher
+- Hugging Face API token
+- 2GB RAM minimum
+- Internet connection for API services
 
-### Recommended
-- Python 3.9 or 3.10
-- 4 GB RAM
-- Virtual Environment Support
+## 🚀 Installation
 
-## 🚀 Installation Guide
-
-### 1. Clone the Repository
+1. **Clone the Repository**
 ```bash
-git clone https://github.com/yourusername/japanese-flashcard-app.git
+git clone https://github.com/yourusername/japanese-flashcard-generator.git
 cd flashcard
+```
 
-### 2. Create Virtual Environment
-# Windows
+2. **Set Up Environment**
+```bash
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate     # Windows
+```
 
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-
-### 3. Install Dependencies
+3. **Install Dependencies**
+```bash
 pip install -r requirements.txt
+```
 
-### 🖥️ Running the Application
-Development Mode
-# Activate virtual environment first
+4. **Configure Environment Variables**
+Create a `.env` file:
+```
+HUGGINGFACE_API_TOKEN=your_token_here
+```
+
+## 🖥️ Usage
+
+1. **Start the Application**
+```bash
 streamlit run app.py
+```
 
-### Production Deployment Options
-Streamlit Cloud
-Heroku
-GitHub Pages
-Local Server
+2. **Using the Flashcard System**
+- Select vocabulary categories from the sidebar
+- Click "Generate Flashcard" for new cards
+- View AI-generated images and vocabulary details
+- Track your learning progress with the spaced repetition system
 
-### 📚 Learning Resources Included
-Duolingo
-Tae Kim's Grammar Guide
-NHK World Easy Japanese
-YouTube Learning Channels
+## 🔧 Configuration
+
+### Image Generation Priority
+1. Hugging Face Stable Diffusion API
+2. Unsplash Image Service
+3. Local Placeholder Generation
+
+### Vocabulary Categories
+- Nouns
+- Verbs
+- (Add more categories as needed)
+
+## 🤝 Acknowledgments
+
+- Hugging Face for AI image generation
+- Unsplash for backup image service
+- Streamlit for the web framework
+- JLPT N5 vocabulary resources
