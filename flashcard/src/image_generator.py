@@ -5,29 +5,22 @@ import requests
 from PIL import Image
 import streamlit as st
 from dotenv import load_dotenv
-from pathlib import Path
 
-# Load environment variables from the correct path
-env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(env_path)
+# Load environment variables
+load_dotenv()
 
 class FreeImageGenerator:
     def __init__(self):
         # API Configurations
-        self.huggingface_api_token = os.getenv('HUGGINGFACE_API_TOKEN')
-        if not self.huggingface_api_token:
-            st.error("""
-            ⚠️ Hugging Face API token not found! Please:
-            1. Sign up at https://huggingface.co
-            2. Go to https://huggingface.co/settings/tokens
-            3. Create a new token (READ access is sufficient)
-            4. Create/edit .env file in the project root
-            5. Add: HUGGINGFACE_API_TOKEN=your_token_here
-            """)
+        token = os.getenv('HUGGINGFACE_API_TOKEN')
+        self.huggingface_api_token = f"hf_{token}" if token and not token.startswith('hf_') else token
         
+        if not self.huggingface_api_token:
+            st.error("Hugging Face API token not found in .env file")
+            return
+
         # API Endpoints - Using a more reliable model
-        self.hf_api_url = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-        # Logging and error tracking
+        self.hf_api_url = "https://api-inference.huggingface.co/models/CompVis/stable-diffusion-v1-4"
         self.api_errors = []
 
     def generate_image(self, vocab_item):
