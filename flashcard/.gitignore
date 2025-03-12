@@ -2,7 +2,10 @@
 venv/
 env/
 ENV/
+
+# Environment files
 .env
+!.env.example
 
 # Python bytecode
 __pycache__/

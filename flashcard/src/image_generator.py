@@ -5,9 +5,11 @@ import requests
 from PIL import Image
 import streamlit as st
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the correct path
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(env_path)
 
 class FreeImageGenerator:
     def __init__(self):
