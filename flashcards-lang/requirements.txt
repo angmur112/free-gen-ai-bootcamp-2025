@@ -1,7 +1,16 @@
+# Core dependencies
 flask==2.0.1
 Pillow==8.4.0
 requests==2.31.0
+
+# Japanese language processing
+pykakasi==2.2.1
+setuptools>=68.0.0  # Required for pykakasi
+
+# Translation services
 deep-translator==1.9.1
+
+# Flask dependencies
 werkzeug==2.0.1
 click==8.0.1
 itsdangerous==2.0.1
