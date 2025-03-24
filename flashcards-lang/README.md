@@ -1,11 +1,14 @@
 # Japanese Flashcard Learning App
 
-A simple but powerful flashcard application to help you learn Japanese with auto-translation and image generation!
+A simple but powerful flashcard application to help you learn Japanese with auto-translation and AI image generation!
 
 ## Features
 
-- English to Japanese automatic translation
-- Automatic image generation using Unsplash API
+- English to Japanese automatic translation with multiple formats:
+  - Kanji (漢字)
+  - Kana (かな)
+  - Romaji
+- AI-powered image generation using Stable Diffusion
 - Local storage of flashcards in SQLite database
 - Image caching for offline review
 - Simple and intuitive interface
@@ -15,8 +18,9 @@ A simple but powerful flashcard application to help you learn Japanese with auto
 ## Prerequisites
 
 - Python 3.7+
-- Unsplash API key (free tier available)
+- Hugging Face account and API token
 - Internet connection for translation and image generation
+- At least 4GB RAM for Stable Diffusion (CPU mode)
 
 ## Python Environment Setup
 
@@ -33,62 +37,32 @@ A simple but powerful flashcard application to help you learn Japanese with auto
    # Python and tkinter are usually bundled together
    ```
 
-2. Required Python Packages (installed via requirements.txt):
-   - flask (2.0.1) - Web framework
-   - Pillow (8.4.0) - Image processing
-   - requests (2.31.0) - HTTP requests
-   - deep-translator (1.9.1) - Translation services
-   - werkzeug (2.0.1) - WSGI utilities
-   - click (8.0.1) - Command line interface
-   - itsdangerous (2.0.1) - Security helpers
-   - Jinja2 (3.0.1) - Template engine
-   - MarkupSafe (2.0.1) - String handling
-
-## Setup
-
-1. Clone this repository:
-   ```bash
-   git clone <repository-url>
-   cd flashcards-lang
-   ```
-
 2. Create and activate virtual environment:
    ```bash
-   # Create virtual environment
    python3 -m venv venv
-
-   # Activate virtual environment
-   # On Linux/macOS:
-   source venv/bin/activate
-   # On Windows:
-   venv\Scripts\activate
-
-   # Verify Python version
-   python --version  # Should be 3.7 or higher
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies:
+3. Install PyTorch (CPU version):
    ```bash
-   pip install --upgrade pip  # Update pip
+   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+   ```
+
+4. Install other dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
 
-4. Get Unsplash API Key:
-   - Sign up at https://unsplash.com/developers
-   - Create a new application
-   - Copy your Access Key
-   - Replace `UNSPLASH_API_KEY` in `app.py` with your key
+## Hugging Face Setup
 
-5. Create placeholder image:
+1. Create account at huggingface.co
+2. Get access token from huggingface.co/settings/tokens
+3. Login via CLI:
    ```bash
-   mkdir -p images
-   curl -o images/placeholder.jpg https://via.placeholder.com/300x200.jpg?text=No+Image
+   huggingface-cli login
+   # Enter your token when prompted
    ```
-
-6. Run the application:
-   ```bash
-   python app.py
-   ```
+4. Replace `HF_TOKEN` in app.py with your token
 
 ## Usage
 
@@ -96,8 +70,8 @@ A simple but powerful flashcard application to help you learn Japanese with auto
 1. Enter an English word in the input field
 2. Click "Create Flashcard"
 3. The app will automatically:
-   - Translate the word to Japanese
-   - Generate a relevant image from Unsplash
+   - Translate the word to Japanese (Kanji, Kana, and Romaji)
+   - Generate an AI image using Stable Diffusion
    - Save both to your local deck
 
 ### Viewing Flashcards
@@ -105,12 +79,12 @@ A simple but powerful flashcard application to help you learn Japanese with auto
 2. Use "Previous" and "Next" buttons to navigate
 3. Each card shows:
    - The English word
-   - Japanese translation
-   - Related image
+   - Japanese translations in three formats
+   - AI-generated image
 
 ### Rate Limits
 - Maximum 5 flashcard creations per minute
-- Unsplash API: 50 requests per hour (free tier)
+- Image generation may take 15-30 seconds on CPU
 
 ## File Structure
 
@@ -125,15 +99,27 @@ flashcards-lang/
 
 ## Troubleshooting
 
-- If images fail to generate, check:
-  - Unsplash API key configuration
-  - Internet connection
-  - Rate limits
-- If translations fail:
+- If Stable Diffusion fails:
+  - Verify Hugging Face token is correct
+  - Ensure enough RAM is available
   - Check internet connection
-  - Verify word is in English
-- If database errors occur:
-  - Ensure write permissions in app directory
+  
+- If Japanese text doesn't display:
+  - Install Japanese fonts:
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get install fonts-noto-cjk
+    ```
+  - Try alternative fonts in app.py:
+    - 'Noto Sans CJK JP'
+    - 'MS Gothic'
+    - 'TakaoGothic'
+    - 'IPAGothic'
+
+- For memory issues:
+  - Use smaller Stable Diffusion model
+  - Reduce inference steps
+  - Enable CPU offloading
 
 - If tkinter is not found:
   ```bash
@@ -165,5 +151,6 @@ This project is licensed under the MIT License.
 ## Credits
 
 - Translation: Google Translate API via deep-translator
-- Images: Unsplash API
+- Image Generation: Stable Diffusion via Hugging Face
+- Japanese Text Processing: pykakasi
 - UI: Tkinter

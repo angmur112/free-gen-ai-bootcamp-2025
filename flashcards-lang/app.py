@@ -13,6 +13,8 @@ import base64
 from io import BytesIO
 import time
 import pykakasi
+from diffusers import StableDiffusionPipeline
+import torch
 
 class FlashcardApp:
     def __init__(self):
@@ -24,6 +26,7 @@ class FlashcardApp:
         self.current_card_index = 0
         self.cards = []
         self.kakasi = pykakasi.kakasi()
+        self.setup_stable_diffusion()
         
     def setup_directories(self):
         try:
@@ -163,107 +166,70 @@ class FlashcardApp:
             print(f"Translation error: {str(e)}")
             return None
 
-    def generate_image_craiyon(self, prompt):
-        """Generate image using Craiyon API"""
+    def setup_stable_diffusion(self):
+        """Initialize Stable Diffusion model"""
         try:
-            url = "https://api.craiyon.com/v3/generate"
-            headers = {
-                "Content-Type": "application/json"
-            }
-            data = {
-                "prompt": prompt,
-                "negative_prompt": "",
-                "model": "photo",
-                "version": "35s",
-                "style": "photo"
-            }
-            response = requests.post(url, headers=headers, json=data)
-            if response.status_code != 200:
-                print(f"Craiyon API error: {response.text}")
-                return None
-                
-            # Save the first generated image
-            image_data = response.json().get('images', [None])[0]
-            if not image_data:
-                return None
-                
-            # Decode base64 image
-            image_bytes = base64.b64decode(image_data)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_prompt = "".join(c for c in prompt if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            image_path = os.path.join('images', f"{safe_prompt}_craiyon_{timestamp}.jpg")
+            # Use CompVis model which is more accessible
+            model_id = "CompVis/stable-diffusion-v1-4"
             
-            # Save image
-            with open(image_path, 'wb') as f:
-                f.write(image_bytes)
-                
-            return image_path
+            # Add your Hugging Face token here
+            HF_TOKEN = "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"  # Get from huggingface.co/settings/tokens
+            
+            self.pipe = StableDiffusionPipeline.from_pretrained(
+                model_id,
+                torch_dtype=torch.float32,
+                use_auth_token=HF_TOKEN,
+                safety_checker=None  # Disable safety checker if memory is an issue
+            )
+            
+            # Enable CPU offload if memory is limited
+            self.pipe.enable_attention_slicing()
+            if torch.cuda.is_available():
+                self.pipe = self.pipe.to("cuda")
+            else:
+                print("CUDA not available, using CPU")
+            print("Stable Diffusion initialized successfully")
+            
         except Exception as e:
-            print(f"Craiyon generation error: {str(e)}")
-            return None
+            print(f"Failed to load Stable Diffusion: {str(e)}")
+            self.pipe = None
 
     def generate_image(self, prompt):
-        """Try multiple image generation services"""
+        """Generate image using Stable Diffusion"""
         try:
-            # Try Unsplash first
-            image_path = self.generate_image_unsplash(prompt)
-            if image_path:
-                return image_path
-                
-            # Fallback to Craiyon
-            image_path = self.generate_image_craiyon(prompt)
-            if image_path:
-                return image_path
-                
-        except Exception as e:
-            print(f"All image generation services failed: {str(e)}")
-        return None
-
-    def generate_image_unsplash(self, prompt):
-        """Generate image using Unsplash API"""
-        try:
-            # Your actual Unsplash API key
-            UNSPLASH_API_KEY = "gtjiujQKo43PdDx4qvWc7EBlraMycFBa7wMRv69blPo"  # Replace with your actual key
-            url = "https://api.unsplash.com/photos/random"
-            headers = {
-                "Authorization": f"Client-ID {UNSPLASH_API_KEY}",
-                "Accept-Version": "v1"
-            }
-            params = {
-                "query": prompt,
-                "orientation": "landscape"
-            }
-            
-            response = requests.get(url, headers=headers, params=params)
-            print(f"Unsplash API response: {response.status_code}")  # Debug line
-            
-            if response.status_code != 200:
-                print(f"Unsplash API error: {response.text}")
-                return None
-            data = response.json()
-            if 'urls' not in data or 'small' not in data['urls']:
-                print("Invalid response format from Unsplash")
+            if not self.pipe:
+                print("Stable Diffusion not initialized")
                 return None
                 
-            image_url = data['urls']['small']
+            print(f"Generating image for prompt: {prompt}")
             
-            # Download and save image
-            img_response = requests.get(image_url)
-            if img_response.status_code != 200:
-                print("Failed to download image")
+            # Add more context to the prompt
+            enhanced_prompt = f"high quality photo of {prompt}, professional photography, 4k, detailed"
+            
+            # Generate image with error handling
+            try:
+                image = self.pipe(
+                    enhanced_prompt,
+                    num_inference_steps=20,  # Reduce steps for faster generation
+                    guidance_scale=7.5
+                ).images[0]
+            except Exception as e:
+                print(f"Image generation failed: {str(e)}")
                 return None
             
-            # Create unique filename using timestamp and word
+            # Save image
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             safe_prompt = "".join(c for c in prompt if c.isalnum() or c in (' ', '-', '_')).rstrip()
             image_path = os.path.join('images', f"{safe_prompt}_{timestamp}.jpg")
-            with open(image_path, 'wb') as f:
-                f.write(img_response.content)
+            
+            # Save the generated image
+            image.save(image_path)
+            print(f"Image saved to: {image_path}")
             
             return image_path
             
         except Exception as e:
-            print(f"Unsplash generation error: {str(e)}")
+            print(f"Image generation error: {str(e)}")
             return None
 
     def save_flashcard(self, english, japanese_dict, image_path):
