@@ -1,7 +1,7 @@
 # Core dependencies
 flask==2.0.1
 Pillow==8.4.0
-requests==2.31.0
+requests==2.31.0  # Important for API calls
 
 # Japanese language processing
 pykakasi==2.2.1
@@ -17,7 +17,9 @@ itsdangerous==2.0.1
 Jinja2==3.0.1
 MarkupSafe==2.0.1
 
-# Image generation
-transformers>=4.36.0
-diffusers>=0.24.0
-accelerate>=0.26.0
+# You can remove these if using only the API approach
+# transformers>=4.36.0
+# diffusers>=0.26.0  
+# accelerate>=0.26.0
+# safetensors>=0.4.0
+# torch>=2.0.0

@@ -1,144 +1,126 @@
 # Japanese Flashcard Learning App
 
-A simple but powerful flashcard application to help you learn Japanese with auto-translation and AI image generation!
+Hey there! This is my Japanese learning app that creates flashcards using AI. I built it to help myself learn Japanese vocabulary with visual aids that actually make sense.
+
+## What it does
+
+This app takes English words you enter, translates them to Japanese, and creates flashcards with AI-generated images. The cards are saved locally so you can review them anytime, even offline.
 
 ## Features
 
-- English to Japanese automatic translation with multiple formats:
-  - Kanji (漢字)
-  - Kana (かな)
-  - Romaji
-- AI-powered image generation using Stable Diffusion
-- Local storage of flashcards in SQLite database
-- Image caching for offline review
-- Simple and intuitive interface
-- Rate limiting to prevent API abuse
-- Previous/Next navigation through flashcard deck
+- Automatic English → Japanese translation showing:
+  - Proper Japanese characters (漢字)
+  - Phonetic kana (かな) so you know how to pronounce it
+  - Romanized text so absolute beginners can read it too
+- Cool AI images for each word using Hugging Face's Stable Diffusion models
+- Smart handling of duplicate words (shows you the existing card instead of creating duplicates)
+- Local storage so your flashcards don't disappear when you close the app
+- Simple interface that doesn't get in your way
+- Deck viewer with next/previous navigation
 
-## Prerequisites
+## What You'll Need
 
-- Python 3.7+
-- Hugging Face account and API token
-- Internet connection for translation and image generation
-- At least 4GB RAM for Stable Diffusion (CPU mode)
+- Python 3.7+ installed on your computer
+- A free Hugging Face account for the image generation API
+- Internet connection (for translation and generating new images)
+- About 4GB of free RAM if running Stable Diffusion locally
 
-## Python Environment Setup
+## Setting Things Up
 
-1. Required System Packages:
+1. First, install these system packages:
    ```bash
-   # For Ubuntu/Debian
+   # Ubuntu/Debian users
    sudo apt-get update
    sudo apt-get install python3-tk python3-pip python3-venv
 
-   # For macOS
+   # Mac users
    brew install python3 python-tk
 
-   # For Windows
-   # Python and tkinter are usually bundled together
+   # Windows users - you probably already have what you need if Python is installed
    ```
 
-2. Create and activate virtual environment:
+2. Set up a virtual environment (keeps things clean):
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # Windows folks: venv\Scripts\activate
    ```
 
-3. Install PyTorch (CPU version):
+3. Install PyTorch (the lightweight CPU version):
    ```bash
    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
    ```
 
-4. Install other dependencies:
+4. Install everything else needed:
    ```bash
    pip install -r requirements.txt
    ```
 
-## Hugging Face Setup
+5. Hugging Face setup:
+   - Create an account at huggingface.co if you don't have one
+   - Go to huggingface.co/settings/tokens and create a new token
+   - Run `huggingface-cli login` and paste your token when asked
+   - Open app.py and replace the HF_TOKEN value with your token
 
-1. Create account at huggingface.co
-2. Get access token from huggingface.co/settings/tokens
-3. Login via CLI:
-   ```bash
-   huggingface-cli login
-   # Enter your token when prompted
-   ```
-4. Replace `HF_TOKEN` in app.py with your token
+## Using the App
 
-## Usage
+Once you're all set up, it's pretty straightforward:
 
-### Creating Flashcards
-1. Enter an English word in the input field
-2. Click "Create Flashcard"
-3. The app will automatically:
-   - Translate the word to Japanese (Kanji, Kana, and Romaji)
-   - Generate an AI image using Stable Diffusion
-   - Save both to your local deck
+### Making New Flashcards
+1. Type an English word in the box
+2. Hit "Create Flashcard"
+3. Wait a few seconds while the app:
+   - Translates your word to Japanese
+   - Creates an image that represents the word
+   - Saves everything to your collection
 
-### Viewing Flashcards
-1. Click "View Deck" to open the flashcard viewer
-2. Use "Previous" and "Next" buttons to navigate
-3. Each card shows:
+### Looking Through Your Cards
+1. Click "View Deck" to see all your cards
+2. Use the "Previous" and "Next" buttons to flip through them
+3. Each card shows you:
    - The English word
-   - Japanese translations in three formats
-   - AI-generated image
+   - The Japanese translations in all three formats
+   - The AI-generated image to help you remember
 
-### Rate Limits
-- Maximum 5 flashcard creations per minute
-- Image generation may take 15-30 seconds on CPU
+### Good to Know
+- You can only create 5 cards per minute (to avoid API abuse)
+- Images might take 15-30 seconds to generate, especially on the first run
+- If you enter a word you've already created a card for, the app will show you the existing card
 
-## File Structure
+## Files and Folders
 
 ```
 flashcards-lang/
-├── app.py              # Main application code
-├── flashcards.db       # SQLite database (auto-created)
-├── images/            # Generated images directory
-│   └── placeholder.jpg # Fallback image
-└── requirements.txt    # Python dependencies
+├── app.py              # The main program code
+├── flashcards.db       # Where your cards get saved
+├── images/             # Folder with all the generated images
+│   └── placeholder.jpg # Backup image if generation fails
+└── requirements.txt    # List of Python packages needed
 ```
 
 ## Troubleshooting
 
-- If Stable Diffusion fails:
-  - Verify Hugging Face token is correct
-  - Ensure enough RAM is available
-  - Check internet connection
-  
-- If Japanese text doesn't display:
-  - Install Japanese fonts:
-    ```bash
-    # Ubuntu/Debian
-    sudo apt-get install fonts-noto-cjk
-    ```
-  - Try alternative fonts in app.py:
-    - 'Noto Sans CJK JP'
-    - 'MS Gothic'
-    - 'TakaoGothic'
-    - 'IPAGothic'
+If something's not working right, check these common issues:
 
-- For memory issues:
-  - Use smaller Stable Diffusion model
-  - Reduce inference steps
-  - Enable CPU offloading
+- **Images aren't generating:** Make sure your Hugging Face token is working and you have a good internet connection
 
-- If tkinter is not found:
+- **Japanese text looks like boxes:** You need Japanese fonts installed:
   ```bash
-  # Ubuntu/Debian
-  sudo apt-get install python3-tk
-  
-  # macOS
-  brew install python-tk@3.9  # Replace 3.9 with your Python version
+  sudo apt-get install fonts-noto-cjk  # For Ubuntu/Debian
   ```
 
-- If pip install fails:
-  - Try updating pip: `pip install --upgrade pip`
-  - Install packages individually: `pip install package-name==version`
-  - Check Python version compatibility
+- **App crashes or freezes:** You might be low on memory. Try using a smaller model or closing other applications
 
-- If module not found errors occur:
-  - Verify virtual environment is activated
-  - Confirm all requirements are installed: `pip list`
-  - Try reinstalling requirements: `pip install -r requirements.txt --force-reinstall`
+- **Can't find tkinter:** Install it with:
+  ```bash
+  sudo apt-get install python3-tk  # Ubuntu/Debian
+  brew install python-tk@3.9       # Mac (match your Python version)
+  ```
+
+- **Weird package errors:** Try updating pip and reinstalling:
+  ```bash
+  pip install --upgrade pip
+  pip install -r requirements.txt --force-reinstall
+  ```
 
 ## Contributing
 

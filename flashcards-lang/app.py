@@ -13,7 +13,7 @@ import base64
 from io import BytesIO
 import time
 import pykakasi
-from diffusers import StableDiffusionPipeline
+from diffusers import DiffusionPipeline
 import torch
 
 class FlashcardApp:
@@ -39,22 +39,30 @@ class FlashcardApp:
             self.conn = sqlite3.connect('flashcards.db')
             self.cursor = self.conn.cursor()
             
-            # Drop existing table if it exists
-            self.cursor.execute('DROP TABLE IF EXISTS flashcards')
-            
-            # Create new table with consistent column names
+            # Check if table exists instead of dropping it
             self.cursor.execute('''
-                CREATE TABLE flashcards (
-                    id INTEGER PRIMARY KEY,
-                    english TEXT,
-                    japanese_kanji TEXT,
-                    japanese_kana TEXT,
-                    japanese_romaji TEXT,
-                    image_path TEXT,
-                    created_at TIMESTAMP
-                )
+                SELECT count(name) FROM sqlite_master 
+                WHERE type='table' AND name='flashcards'
             ''')
-            self.conn.commit()
+            
+            # Create table only if it doesn't exist
+            if self.cursor.fetchone()[0] == 0:
+                print("Creating new flashcards table")
+                self.cursor.execute('''
+                    CREATE TABLE flashcards (
+                        id INTEGER PRIMARY KEY,
+                        english TEXT,
+                        japanese_kanji TEXT,
+                        japanese_kana TEXT,
+                        japanese_romaji TEXT,
+                        image_path TEXT,
+                        created_at TIMESTAMP
+                    )
+                ''')
+                self.conn.commit()
+            else:
+                print("Using existing flashcards table")
+                
         except Exception as e:
             messagebox.showerror("Error", f"Database error: {str(e)}")
 
@@ -79,6 +87,16 @@ class FlashcardApp:
         ttk.Button(input_frame, text="View Deck", 
                   command=self.view_deck).grid(row=0, column=3)
 
+    def check_if_word_exists(self, english_word):
+        """Check if the word already exists in the database"""
+        try:
+            self.cursor.execute("SELECT * FROM flashcards WHERE LOWER(english) = LOWER(?)", (english_word,))
+            existing_card = self.cursor.fetchone()
+            return existing_card
+        except Exception as e:
+            print(f"Error checking for existing word: {str(e)}")
+            return None
+
     def create_flashcard(self):
         if self.check_rate_limit():
             english_word = self.word_entry.get().strip()
@@ -87,6 +105,29 @@ class FlashcardApp:
                 return
                 
             try:
+                # Check if word already exists
+                existing_card = self.check_if_word_exists(english_word)
+                
+                if existing_card:
+                    # Word already exists, notify user and show the existing flashcard
+                    messagebox.showinfo("Word Exists", f"'{english_word}' already exists in your deck!")
+                    
+                    # Show the existing flashcard
+                    japanese_dict = {
+                        'kanji': existing_card[2],
+                        'kana': existing_card[3],
+                        'romaji': existing_card[4]
+                    }
+                    image_path = existing_card[5]
+                    
+                    # Clear entry
+                    self.word_entry.delete(0, tk.END)
+                    
+                    # Show the existing flashcard
+                    self.show_existing_flashcard(english_word, japanese_dict, image_path)
+                    return
+                
+                # Continue with creating a new flashcard if the word doesn't exist
                 # Translate text with multiple formats
                 japanese_dict = self.translate_text(english_word)
                 if not japanese_dict:
@@ -104,15 +145,137 @@ class FlashcardApp:
                 # Clear entry
                 self.word_entry.delete(0, tk.END)
                 
-                messagebox.showinfo("Success", 
-                    f"Flashcard created successfully!\n"
-                    f"English: {english_word}\n"
-                    f"漢字: {japanese_dict['kanji']}\n"
-                    f"かな: {japanese_dict['kana']}\n"
-                    f"Romaji: {japanese_dict['romaji']}")
+                # Show the newly created flashcard with image
+                self.show_new_flashcard(english_word, japanese_dict, image_path)
                     
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to create flashcard: {str(e)}")
+    
+    def show_existing_flashcard(self, english, japanese_dict, image_path):
+        """Display an existing flashcard with image"""
+        # Create new window for the flashcard
+        existing_card_window = tk.Toplevel(self.root)
+        existing_card_window.title("Existing Flashcard")
+        existing_card_window.geometry("550x650")
+        
+        # Create display frame
+        display_frame = ttk.Frame(existing_card_window, padding="20")
+        display_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Information header
+        ttk.Label(
+            display_frame, 
+            text="Existing Flashcard Found", 
+            font=('Arial', 16, 'bold')
+        ).pack(pady=(0, 20))
+        
+        # Image display - same code as show_new_flashcard
+        try:
+            if image_path and os.path.exists(image_path):
+                image = Image.open(image_path)
+                image.thumbnail((300, 200), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(image)
+                image_label = ttk.Label(display_frame)
+                image_label.pack(pady=10)
+                image_label.config(image=photo)
+                image_label.image = photo  # Keep reference to prevent garbage collection
+            else:
+                ttk.Label(display_frame, text="Image not available").pack(pady=10)
+        except Exception as e:
+            print(f"Error displaying image: {str(e)}")
+            ttk.Label(display_frame, text="Error displaying image").pack(pady=10)
+        
+        # Format Japanese text
+        japanese_text = (
+            f"日本語 (Japanese):\n\n"
+            f"漢字: {japanese_dict['kanji']}\n\n"
+            f"かな: {japanese_dict['kana']}\n\n"
+            f"Romaji: {japanese_dict['romaji']}"
+        )
+        
+        # Word information
+        ttk.Label(
+            display_frame,
+            text=f"English: {english}", 
+            font=('Arial Unicode MS', 14, 'bold')
+        ).pack(pady=10)
+        
+        ttk.Label(
+            display_frame,
+            text=japanese_text,
+            font=('Arial Unicode MS', 14),
+            justify=tk.LEFT
+        ).pack(pady=10)
+        
+        # Close button
+        ttk.Button(
+            display_frame, 
+            text="Close", 
+            command=existing_card_window.destroy
+        ).pack(pady=20)
+
+    def show_new_flashcard(self, english, japanese_dict, image_path):
+        """Display the newly created flashcard with image"""
+        # Create new window for the flashcard
+        new_card_window = tk.Toplevel(self.root)
+        new_card_window.title("New Flashcard Created")
+        new_card_window.geometry("550x650")  # Increased from 500x500 to 550x650
+        
+        # Create display frame
+        display_frame = ttk.Frame(new_card_window, padding="20")
+        display_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Success header
+        ttk.Label(
+            display_frame, 
+            text="Flashcard Created Successfully!", 
+            font=('Arial', 16, 'bold')
+        ).pack(pady=(0, 20))
+        
+        # Image display
+        try:
+            if image_path and os.path.exists(image_path):
+                image = Image.open(image_path)
+                image.thumbnail((300, 200), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(image)
+                image_label = ttk.Label(display_frame)
+                image_label.pack(pady=10)
+                image_label.config(image=photo)
+                image_label.image = photo  # Keep reference to prevent garbage collection
+            else:
+                ttk.Label(display_frame, text="Image not available").pack(pady=10)
+        except Exception as e:
+            print(f"Error displaying image: {str(e)}")
+            ttk.Label(display_frame, text="Error displaying image").pack(pady=10)
+        
+        # Format Japanese text
+        japanese_text = (
+            f"日本語 (Japanese):\n\n"
+            f"漢字: {japanese_dict['kanji']}\n\n"
+            f"かな: {japanese_dict['kana']}\n\n"
+            f"Romaji: {japanese_dict['romaji']}"
+        )
+        
+        # Word information
+        ttk.Label(
+            display_frame,
+            text=f"English: {english}", 
+            font=('Arial Unicode MS', 14, 'bold')
+        ).pack(pady=10)
+        
+        ttk.Label(
+            display_frame,
+            text=japanese_text,
+            font=('Arial Unicode MS', 14),
+            justify=tk.LEFT
+        ).pack(pady=10)
+        
+        # Close button
+        ttk.Button(
+            display_frame, 
+            text="Close", 
+            command=new_card_window.destroy
+        ).pack(pady=20)
 
     def check_rate_limit(self):
         current_time = datetime.now()
@@ -167,66 +330,151 @@ class FlashcardApp:
             return None
 
     def setup_stable_diffusion(self):
-        """Initialize Stable Diffusion model"""
+        """Initialize connection to Hugging Face Inference API with fallback models"""
         try:
-            # Use CompVis model which is more accessible
-            model_id = "CompVis/stable-diffusion-v1-4"
+            # Your Hugging Face token here
+            self.HF_TOKEN = "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"
             
-            # Add your Hugging Face token here
-            HF_TOKEN = "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"  # Get from huggingface.co/settings/tokens
+            # Define multiple models to try in order of preference
+            self.model_options = [
+                "runwayml/stable-diffusion-v1-5",
+                "stabilityai/stable-diffusion-2-base",
+                "CompVis/stable-diffusion-v1-4",
+                "prompthero/openjourney"  # Another good alternative
+            ]
             
-            self.pipe = StableDiffusionPipeline.from_pretrained(
-                model_id,
-                torch_dtype=torch.float32,
-                use_auth_token=HF_TOKEN,
-                safety_checker=None  # Disable safety checker if memory is an issue
-            )
+            self.current_model_index = 0
+            self.api_url = f"https://api-inference.huggingface.co/models/{self.model_options[self.current_model_index]}"
+            self.headers = {"Authorization": f"Bearer {self.HF_TOKEN}"}
             
-            # Enable CPU offload if memory is limited
-            self.pipe.enable_attention_slicing()
-            if torch.cuda.is_available():
-                self.pipe = self.pipe.to("cuda")
-            else:
-                print("CUDA not available, using CPU")
-            print("Stable Diffusion initialized successfully")
+            print(f"Hugging Face API connection initialized with model: {self.model_options[self.current_model_index]}")
             
+            # Test connection but don't fail if unsuccessful - we'll try others during generation
+            try:
+                response = requests.post(
+                    self.api_url, 
+                    headers=self.headers, 
+                    json={"inputs": "test"}, 
+                    timeout=5  # Short timeout for initial test
+                )
+                if response.status_code == 200:
+                    print("Connection to HF Inference API successful")
+                else:
+                    print(f"Initial API test returned status code: {response.status_code} (will try other models if needed)")
+            except:
+                print("Initial API test failed (will try other models during generation)")
+                
         except Exception as e:
-            print(f"Failed to load Stable Diffusion: {str(e)}")
-            self.pipe = None
+            print(f"Failed to initialize API connection: {str(e)}")
 
     def generate_image(self, prompt):
-        """Generate image using Stable Diffusion"""
+        """Generate image using Hugging Face Inference API with model rotation"""
         try:
-            if not self.pipe:
-                print("Stable Diffusion not initialized")
-                return None
-                
-            print(f"Generating image for prompt: {prompt}")
-            
             # Add more context to the prompt
             enhanced_prompt = f"high quality photo of {prompt}, professional photography, 4k, detailed"
             
-            # Generate image with error handling
+            print(f"Sending prompt to API: {enhanced_prompt}")
+            
+            # Send request to Hugging Face Inference API
+            payload = {
+                "inputs": enhanced_prompt,
+                "parameters": {
+                    "num_inference_steps": 25,
+                    "guidance_scale": 7.5
+                }
+            }
+            
+            # Try each model in our list
+            for model_idx in range(len(self.model_options)):
+                # Update to current model in rotation
+                self.api_url = f"https://api-inference.huggingface.co/models/{self.model_options[model_idx]}"
+                print(f"Trying model: {self.model_options[model_idx]}")
+                
+                # Implement retry logic with backoff for current model
+                max_retries = 3  # Fewer retries per model since we have multiple models
+                retry_delay = 2
+                
+                for attempt in range(max_retries):
+                    try:
+                        response = requests.post(
+                            self.api_url, 
+                            headers=self.headers, 
+                            json=payload,
+                            timeout=60
+                        )
+                        
+                        if response.status_code == 200:
+                            # Process the image from the response
+                            image = Image.open(BytesIO(response.content))
+                            
+                            # Save image
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            safe_prompt = "".join(c for c in prompt if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                            image_path = os.path.join('images', f"{safe_prompt}_{timestamp}.jpg")
+                            
+                            # Save the generated image
+                            image.save(image_path)
+                            print(f"Image successfully generated with model {self.model_options[model_idx]}")
+                            print(f"Image saved to: {image_path}")
+                            
+                            # Update default model for next time if this isn't the first choice
+                            if model_idx != self.current_model_index:
+                                self.current_model_index = model_idx
+                                print(f"Updated default model to: {self.model_options[model_idx]}")
+                                
+                            return image_path
+                        
+                        elif response.status_code == 503:
+                            print(f"Model {self.model_options[model_idx]} returned 503, attempt {attempt+1}/{max_retries}")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                            continue
+                        
+                        else:
+                            print(f"Model {self.model_options[model_idx]} returned error {response.status_code}, trying next model")
+                            break  # Try next model
+                            
+                    except Exception as e:
+                        print(f"Error with model {self.model_options[model_idx]}: {str(e)}")
+                        break  # Try next model
+            
+            # If we get here, all models failed
+            print("All models failed, creating text-based fallback image")
+            
+            # Create a better text-based fallback image
+            width, height = 512, 512
+            background_color = (245, 245, 245)
+            text_color = (0, 0, 0)
+            
+            # Create image with text
+            fallback_img = Image.new('RGB', (width, height), color=background_color)
+            
+            # Get a drawing context
+            from PIL import ImageDraw, ImageFont
+            draw = ImageDraw.Draw(fallback_img)
+            
+            # Use default font if custom font not available
             try:
-                image = self.pipe(
-                    enhanced_prompt,
-                    num_inference_steps=20,  # Reduce steps for faster generation
-                    guidance_scale=7.5
-                ).images[0]
-            except Exception as e:
-                print(f"Image generation failed: {str(e)}")
-                return None
+                font = ImageFont.truetype("arial.ttf", 40)
+            except IOError:
+                font = ImageFont.load_default()
+                
+            # Draw word in center of image
+            text = prompt
+            text_width = draw.textlength(text, font=font)
+            text_height = 40  # Approximate height
+            
+            text_x = (width - text_width) / 2
+            text_y = (height - text_height) / 2
+            
+            draw.text((text_x, text_y), text, fill=text_color, font=font)
             
             # Save image
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_prompt = "".join(c for c in prompt if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            image_path = os.path.join('images', f"{safe_prompt}_{timestamp}.jpg")
+            fallback_path = os.path.join('images', f"fallback_{prompt}_{timestamp}.jpg")
+            fallback_img.save(fallback_path)
             
-            # Save the generated image
-            image.save(image_path)
-            print(f"Image saved to: {image_path}")
-            
-            return image_path
+            return fallback_path
             
         except Exception as e:
             print(f"Image generation error: {str(e)}")
@@ -234,6 +482,9 @@ class FlashcardApp:
 
     def save_flashcard(self, english, japanese_dict, image_path):
         try:
+            # Use ISO format string instead of datetime object
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
             self.cursor.execute('''
                 INSERT INTO flashcards 
                 (english, japanese_kanji, japanese_kana, japanese_romaji, image_path, created_at)
@@ -244,7 +495,7 @@ class FlashcardApp:
                 japanese_dict['kana'],
                 japanese_dict['romaji'],
                 image_path,
-                datetime.now()
+                current_time  # Use string instead of datetime object
             ))
             self.conn.commit()
         except Exception as e:
@@ -354,18 +605,27 @@ class FlashcardApp:
 
 if __name__ == "__main__":
     app = FlashcardApp()
-    app.run()
-    flask_app = Flask(__name__)
+    
+    # Create a Flask app in a separate thread
+    def run_flask():
+        flask_app = Flask(__name__)
 
-    @flask_app.route('/flashcards/<int:card_id>', methods=['GET'])
-    def get_flashcard(card_id):
-        # Your flashcard retrieval logic here
-        return jsonify({"card_id": card_id})
+        @flask_app.route('/flashcards/<int:card_id>', methods=['GET'])
+        def get_flashcard(card_id):
+            # Your flashcard retrieval logic here
+            return jsonify({"card_id": card_id})
 
-    @flask_app.route('/flashcards/', methods=['POST'])
-    def create_flashcard():
-        # Your flashcard creation logic here
-        data = request.get_json()
-        return jsonify(data)
-
+        @flask_app.route('/flashcards/', methods=['POST'])
+        def create_flashcard_api():
+            # Your flashcard creation logic here
+            data = request.get_json()
+            return jsonify(data)
+        
+        flask_app.run(port=5000, debug=False)
+    
+    # Start Flask in a separate thread
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Run the tkinter app in the main thread
     app.run()
