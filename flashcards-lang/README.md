@@ -121,18 +121,3 @@ If something's not working right, check these common issues:
   pip install --upgrade pip
   pip install -r requirements.txt --force-reinstall
   ```
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
-
-## License
-
-This project is licensed under the MIT License.
-
-## Credits
-
-- Translation: Google Translate API via deep-translator
-- Image Generation: Stable Diffusion via Hugging Face
-- Japanese Text Processing: pykakasi
-- UI: Tkinter
